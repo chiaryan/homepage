@@ -1,6 +1,5 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
-import loue from "../loe.jpg"
+import loue from "~/assets/loe.jpg"
 
 export function meta({}: Route.MetaArgs) {
   return [

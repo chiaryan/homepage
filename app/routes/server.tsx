@@ -1,5 +1,6 @@
-import { LoaderCircleIcon, PowerIcon, RefreshCw } from "lucide-react";
+import { LoaderCircleIcon, PowerIcon, RefreshCw, User, User2 } from "lucide-react";
 import { useEffect, useState, type JSX } from "react"
+import defaultIcon from "~/assets/default-icon.png"
 
 
 type OfflineStatus = "paused" | "creating" | "starting" | "pausing";
@@ -24,9 +25,10 @@ export default function Home() {
                 "Content-Type": "application/json",
             },
             method: "GET",
-        })
+        });
 
-        const json = await response.json()
+        const json = await response.json();
+        console.log(json);
 
         switch (json.status) {
             case "paused":
@@ -39,10 +41,11 @@ export default function Home() {
                 setStatus({
                     motd: json.motd,
                     players: json.players,
-                    maxPlayers: json.maxPlayers,
+                    maxPlayers: json.max_players,
                     url: json.url,
                     ...(json.image ? {image: json.image} : {}),
                 })
+                break;
             default:
                 console.error("invalid response ", json)
                 setStatus({});
@@ -51,7 +54,7 @@ export default function Home() {
     }
 
     async function startServer() {
-        await fetch(import.meta.env.API_URL, {
+        await fetch(import.meta.env.VITE_API_URL, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -79,7 +82,7 @@ export default function Home() {
                         ? <OfflineServerCard status={status as OfflineStatus} startServer={startServer}/> // ok since status must 
                         : "motd" in status 
                             ? <OnlineServerCard status={status}/>
-                            : <></>
+                            : <div className="w-xl h-36 bg-mist-400"/>
                 }
             </div>
         </main>
@@ -87,12 +90,15 @@ export default function Home() {
 }
 
 function OnlineServerCard({status}: {status: OnlineStatus}): JSX.Element {
-    return <div>
-        <div className="">
-            <div>{status.url}</div><div>{status.players}/{status.maxPlayers}</div>
-        </div>
-        <div>
-            {status.motd}
+    return <div className="flex w-xl h-36 border border-white p-2 font-mono text-xl">
+        <img src={defaultIcon} className="h-full"/>
+        <div className="flex-grow pl-4">
+            <div className="flex place-content-between">
+                <div>{status.url}</div><div className="flex"><User2 className="mr-1"/> {status.players}/{status.maxPlayers}</div>
+            </div>
+            <div>
+                {status.motd}
+            </div>
         </div>
     </div>
 }
