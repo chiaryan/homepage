@@ -1,6 +1,7 @@
 import { LoaderCircleIcon, PowerIcon, RefreshCw, User, User2 } from "lucide-react";
 import { useEffect, useState, type JSX } from "react"
 import defaultIcon from "~/assets/default-icon.png"
+import type { Route } from "./+types/server";
 
 
 type OfflineStatus = "paused" | "creating" | "starting" | "pausing";
@@ -15,8 +16,7 @@ type OnlineStatus = {
 
 type Status = OfflineStatus | OnlineStatus | {};
 
-    
-export default function Home() {
+export default function Page({loaderData} : Route.ComponentProps) {
     const [status, setStatus] = useState<Status>({});
 
     async function refreshStatus() {
@@ -28,7 +28,6 @@ export default function Home() {
         });
 
         const json = await response.json();
-        console.log(json);
 
         switch (json.status) {
             case "paused":
@@ -59,11 +58,9 @@ export default function Home() {
                 "Content-Type": "application/json",
             },
             method: "POST",
-        })
+        });
+        await refreshStatus();
     }
-
-    
-
 
     useEffect(() => {refreshStatus(); }, [])
     
@@ -74,9 +71,6 @@ export default function Home() {
                     <div className="align-middle">Server Thing</div>
                     <button onClick={refreshStatus}><RefreshCw/></button>
                 </div>
-                <div>
-
-                </div>
                 {
                     typeof status === "string" 
                         ? <OfflineServerCard status={status as OfflineStatus} startServer={startServer}/> // ok since status must 
@@ -85,13 +79,14 @@ export default function Home() {
                             : <div className="w-xl h-36 bg-mist-400"/>
                 }
             </div>
+
         </main>
     )
 }
 
 function OnlineServerCard({status}: {status: OnlineStatus}): JSX.Element {
     return <div className="flex w-xl h-36 border border-white p-2 font-mono text-xl">
-        <img src={defaultIcon} className="h-full"/>
+        <img src={status.image ?? defaultIcon} className="h-full"/>
         <div className="flex-grow pl-4">
             <div className="flex place-content-between">
                 <div>{status.url}</div><div className="flex"><User2 className="mr-1"/> {status.players}/{status.maxPlayers}</div>
