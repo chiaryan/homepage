@@ -2,6 +2,7 @@ import { LoaderCircleIcon, PowerIcon, RefreshCw, User, User2 } from "lucide-reac
 import { useEffect, useState, type JSX } from "react"
 import defaultIcon from "~/assets/default-icon.png"
 import type { Route } from "./+types/server";
+import { useFetcher, useRevalidator, useSubmit } from "react-router";
 
 
 type OfflineStatus = "paused" | "creating" | "starting" | "pausing";
@@ -14,67 +15,71 @@ type OnlineStatus = {
     url: string;
 };
 
-type Status = OfflineStatus | OnlineStatus | {};
+type Status = OfflineStatus | OnlineStatus;
 
-export default function Page({loaderData} : Route.ComponentProps) {
-    const [status, setStatus] = useState<Status>({});
+export async function clientLoader({}: Route.ClientLoaderArgs): Promise<Status> {
+    const response = await fetch(import.meta.env.VITE_API_URL, {
+        headers: {
+            "Content-Type": "application/json",
+        },
+        method: "GET",
+    });
 
-    async function refreshStatus() {
-        const response = await fetch(import.meta.env.VITE_API_URL, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-            method: "GET",
-        });
+    const {status, ...json} = await response.json();
 
-        const json = await response.json();
+    switch (status) {
+        case "paused":
+        case "creating":
+        case "starting":
+        case "pausing":
+            return status;
+        case "running":
+            return {
+                motd: json.motd,
+                players: json.players,
+                maxPlayers: json.max_players,
+                url: json.url,
+                ...(json.image ? {image: json.image} : {}),
+            };
+        default:
+            console.error("invalid response", json);
+            throw new Error("invalid response")
+    }
+}
+clientLoader.hydrate = true as const;
 
-        switch (json.status) {
-            case "paused":
-            case "creating":
-            case "starting":
-            case "pausing":
-                setStatus(json.status);
-                break;
-            case "running":
-                setStatus({
-                    motd: json.motd,
-                    players: json.players,
-                    maxPlayers: json.max_players,
-                    url: json.url,
-                    ...(json.image ? {image: json.image} : {}),
-                })
-                break;
-            default:
-                console.error("invalid response ", json)
-                setStatus({});
-                break;
+export async function clientAction() {
+    return fetch(import.meta.env.VITE_API_URL, {
+        headers: {
+            "Content-Type": "application/json",
+        },
+        method: "POST",
+    });
+}
+
+export default function Page({loaderData: status} : Route.ComponentProps) {
+    const {submit, state} = useFetcher();
+    const {revalidate} = useRevalidator();
+
+    useEffect(() => {
+        if (status != "paused") {
+            const i = setInterval(revalidate, 10000);
+            return () => clearInterval(i);
         }
-    }
-
-    async function startServer() {
-        await fetch(import.meta.env.VITE_API_URL, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-            method: "POST",
-        });
-        await refreshStatus();
-    }
-
-    useEffect(() => {refreshStatus(); }, [])
+    }, [status])
     
     return (
         <main className="flex justify-center pt-8 pb-4">
             <div className="flex flex-col gap-4">
                 <div className="flex place-content-between items-center">
-                    <div className="align-middle">Server Thing</div>
-                    <button onClick={refreshStatus}><RefreshCw/></button>
+                    <div className="align-middle">Server Thing ({state})</div>
+                    {/* <button onClick={revalidate}><RefreshCw/></button> */}
                 </div>
                 {
                     typeof status === "string" 
-                        ? <OfflineServerCard status={status as OfflineStatus} startServer={startServer}/> // ok since status must 
-                        : "motd" in status 
+                        // ok since status must be on of the options
+                        ? <OfflineServerCard status={status as OfflineStatus} startServer={() => submit({}, {method: 'post'})}/> 
+                        : "motd" in status
                             ? <OnlineServerCard status={status}/>
                             : <div className="w-xl h-36 bg-mist-400"/>
                 }
