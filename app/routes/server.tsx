@@ -2,7 +2,7 @@ import { LoaderCircleIcon, PowerIcon, User2 } from "lucide-react";
 import { useEffect, type JSX } from "react"
 import defaultIcon from "~/assets/default-icon.png"
 import type { Route } from "./+types/server";
-import { useFetcher, useRevalidator} from "react-router";
+import { data, useFetcher, useRevalidator} from "react-router";
 
 
 type OfflineStatus = "paused" | "creating" | "starting" | "pausing";
@@ -47,6 +47,10 @@ async function getStatus() {
         headers: { "Content-Type": "application/json" },
         method: "GET",
     });
+
+    if (!res.ok) {
+        return {status: "starting"};
+    }
     return await res.json();
 }
 async function startServer() {
