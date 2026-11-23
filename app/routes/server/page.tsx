@@ -11,7 +11,7 @@ type OnlineStatus = {
     motd: string;
     players: number;
     maxPlayers: number;
-    image?: string;
+    icon?: string;
     url: string;
 };
 
@@ -33,7 +33,7 @@ export async function clientLoader({}: Route.ClientLoaderArgs): Promise<Status> 
                 players: json.players,
                 maxPlayers: json.max_players,
                 url: json.url,
-                ...(json.image ? {image: json.image} : {}),
+                ...(json.icon ? {icon: json.icon} : {}),
             };
         default:
             console.error("invalid response", json);
@@ -101,7 +101,7 @@ export default function Page({loaderData: status} : Route.ComponentProps) {
 function OnlineServerCard({status}: {status: OnlineStatus}): JSX.Element {
     return <div className="flex w-xl h-36 border border-white p-2 font-mono text-xl">
         <div className="h-full aspect-square">
-            <img src={status.image ?? defaultIcon} className="size-full"/>
+            <img src={status.icon ?? defaultIcon} className="size-full"/>
         </div>
         <div className="grow pl-4">
             <div className="flex place-content-between">
