@@ -1,9 +1,9 @@
 import { LoaderCircleIcon, PowerIcon, User2 } from "lucide-react";
 import { useEffect, type JSX } from "react"
 import defaultIcon from "~/assets/default-icon.png"
-import type { Route } from "./+types/server";
-import { data, useFetcher, useRevalidator} from "react-router";
-
+import type { Route } from "./+types/page";
+import { useFetcher, useRevalidator} from "react-router";
+import { useDelayedStatus } from "./state";
 
 type OfflineStatus = "paused" | "creating" | "starting" | "pausing";
 
@@ -15,7 +15,7 @@ type OnlineStatus = {
     url: string;
 };
 
-type Status = OfflineStatus | OnlineStatus;
+export type Status = OfflineStatus | OnlineStatus;
 
 export async function clientLoader({}: Route.ClientLoaderArgs): Promise<Status> {
     
@@ -53,70 +53,47 @@ async function getStatus() {
     }
     return await res.json();
 }
+
 async function startServer() {
     return fetch(import.meta.env.VITE_API_URL, {
         headers: { "Content-Type": "application/json" },
         method: "POST",
     });
 }
-
-// async function getStatus(): Promise<any> {
-
-//     const arr = [
-//         {status: "paused"},
-//         {status: "starting"},
-//         {status: "creating"},
-//         {status: "pausing"},
-//         {
-//             status: "running",
-//             motd: "message",
-//             players: 20,
-//             max_players: 200,
-//             url: "mc.ch"
-//         },
-//     ]
-
-//     return arr[Math.floor(Math.random() * arr.length)]
-// }
-// async function startServer(): Promise<void> {
-//     return;
-// }
-
 export const clientAction = startServer;
 
-
 export default function Page({loaderData: status} : Route.ComponentProps) {
-    const {submit, state} = useFetcher();
+    const {submit, state: fetcherState} = useFetcher();
     const {revalidate} = useRevalidator();
 
-    if (state !== "idle") {
+    if (fetcherState !== "idle") {
         status = "starting";
     }
 
+    const displayStatus = useDelayedStatus(status);
+
     useEffect(() => {
         if (status != "paused") {
-            const i = setInterval(revalidate, 5000);
+            const i = setInterval(revalidate, 2000);
             return () => clearInterval(i);
         }
-    }, [status])
-    
+    }, [displayStatus])
+
     return (
         <main className="flex justify-center pt-8 pb-4">
             <div className="flex flex-col gap-4">
                 <div className="flex place-content-between items-center">
                     <div className="align-middle">Server Thing</div>
-                    {/* <button onClick={revalidate}><RefreshCw/></button> */}
                 </div>
                 {
-                    typeof status === "string" 
+                    typeof displayStatus === "string" 
                         // ok since status must be on of the options
-                        ? <OfflineServerCard status={status as OfflineStatus} startServer={() => submit({}, {method: 'post'})}/> 
-                        : "motd" in status
-                            ? <OnlineServerCard status={status}/>
+                        ? <OfflineServerCard status={displayStatus as OfflineStatus} startServer={() => submit({}, {method: 'post'})}/> 
+                        : "motd" in displayStatus
+                            ? <OnlineServerCard status={displayStatus}/>
                             : <div className="w-xl h-36 bg-mist-400"/>
                 }
             </div>
-
         </main>
     )
 }
